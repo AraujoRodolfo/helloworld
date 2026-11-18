@@ -13,81 +13,78 @@
  - SALVAR O ARQUIVO COMO CSV
 ###  3. NO PORTAL:
  - CRIAR AS COLUNAS DE NOTAS NO PORTAL SEGUINDO A ORDEM DAS COLUNAS DO EXCEL COMO SP1A1, SP1A2...SP2A1..ETC
- - CONFIGURAR A FÓRMULA DAS NOTAS PARA: **ROUND (N1+N2+N3+N4+N5+N6+N7,0)**
+ - CONFIGURAR A FÓRMULA DAS NOTAS PARA REMOVER A DIVISÃO (PESO): **ROUND (N1+N2+N3+N4+N5+N6+N7,0)**
 
     > AS NOTAS JÁ TEM PESO CONFIGURADO NO PORTAL EAD, TOTALIZANDO 100. NÃO FAREMOS PESO SOBRE PESO
 ###  4. ABRIR A PLANILHA PARA DIGITAÇÃO DE NOTAS
- - ABRA O CONSOLE (CTRL+SHIT+i)
- - INSPECIONAR O PRIMEIRO CAMPO ONDE SERÁ DIGITADO A PRIMEIRA NOTA DO PRIMEIRO ALUNO
- - OBSERVAR A PROPRIEDADE "NAME" DO INPUT E IDENTIFICAR O CÓDIGO, POR EXEMPLO:
-
-   > ctl00$MainContent$Notas$gdvNotas$ctl02$txt**490693**P1
-
- - O CÓDIGO É O QUE VEM APÓS "TXT" E ANTES DE "P1", NO EXEMPLO O CÓDIGO É: **490693**
-
-##### CÓDIGO 
+ - ABRA A TELA DA UNIDADE CURRICULAR, NA GUIA NOTAS PARA QUE SEJA EXIBIDO OS CAMPOS DE DIGITAÇÃO DE CADA NOTA
+ - > NÃO SERÁ NECESSÁRIO INSPECIONAR A PÁGINA PARA MAPEAR MAIS, O CÓDIGO FOI ATUALIZADO PARA FAZER ISSO SOZINHO.
+##### CÓDIGO ATUALIZADO (V1.2)
 ```js
-function vai(codigo){
+function importarNotasCSV() {
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
   fileInput.accept = '.csv';
+  
   fileInput.onchange = event => {
-  const file = event.target.files[0];
+    const file = event.target.files[0];
+    if (!file) return;
 
-  if (file) {
     const reader = new FileReader();
       
     reader.onload = function(e) {
       const csvContent = e.target.result;
-      const rows = csvContent.split('\n');
-      const header = rows[0].split(';').map(col => col.trim()); 
+      // Remove caracteres ocultos de quebra de linha do Windows (\r) e ignora linhas vazias no final
+      const rows = csvContent.replace(/\r/g, '').split('\n').filter(row => row.trim() !== '');
       
+      // Seleciona todas as linhas da tabela, ignorando a primeira que é o cabeçalho (<th>)
+      const tableRows = document.querySelectorAll('#MainContent_Notas_gdvNotas tr:not(:first-child)');
+      
+      // i = 1 para pular o cabeçalho do CSV
       for (let i = 1; i < rows.length; i++) {
-          const columns = rows[i].split(';').map(col => col.trim()); 
-          const rowIndex = String(i + 1).padStart(2, '0'); 
-          columns.forEach(function(columnValue, colIndex) {              
-              if (columnValue === "-") {
-                  columnValue = "0";
-              }              
-              const fieldNumber = codigo + colIndex; 
-              const fieldSuffix = header[colIndex].replace('P', ''); 
-              const inputName = `ctl00$MainContent$Notas$gdvNotas$ctl${rowIndex}$txt${fieldNumber}P${fieldSuffix}`;
-              const input = document.querySelector(`input[name="${inputName}"]`);
-              if (input) {
-                  input.value = columnValue; 
-              }
-          });
+        const columns = rows[i].split(';').map(col => col.trim()); 
+        const studentIndex = i - 1; // A linha 1 do CSV bate com a linha 0 de dados da tabela
+        
+        // Se a linha do aluno existir no HTML
+        if (tableRows[studentIndex]) {
+            // Pega apenas os campos de input de texto desta linha específica (os campos de nota)
+            const inputs = tableRows[studentIndex].querySelectorAll('input[type="text"]');
+            
+            columns.forEach(function(columnValue, colIndex) {              
+                if (columnValue === "-") {
+                    columnValue = "0";
+                }              
+                
+                // Se existir um input na mesma posição da coluna do CSV, insere a nota
+                if (inputs[colIndex]) {
+                    inputs[colIndex].value = columnValue; 
+                }
+            });
+        }
       }
+      alert("Notas importadas com sucesso!");
     };    
     reader.readAsText(file); 
-  }
-};
-fileInput.click();
-
+  };
+  
+  fileInput.click();
 }
-vai(490709); // < ---- atualizar conforme inspecionado 
+
+// Executa a ferramenta direto
+importarNotasCSV(); 
 
 ```
- - SUBSTITUIR O CÓDIGO OBSERVADO NO CAMPO, NA ÚLTIMA LINHA DE CÓDIGO ACIMA, EXEMPLO:
-
-   >  Vai(**490693**);
-
 
 ### 5. A MÁGICA DE LANÇAMENTO RECORD:
-- COPIAR O SCRIOT ACIMA COM ALTERAÇÃO DO CÓDIGO JÁ FEITA E COLAR NO CONSOLE
-
+- COPIAR O SCRIPT ACIMA E COLAR NO CONSOLE
   > SERÁ NECESSÁRIO PERMITIR ESSA AÇÃO DIGITANDO O QUE SERÁ SOLICITADO NO CONSOLE
-
-- COPIAR E COLAR NOVAMENTE O CÓDIGO E PRESSIONAR ENTER
+  > COPIAR E COLAR NOVAMENTE O CÓDIGO E PRESSIONAR ENTER
 - NA JANELA QUE SERÁ ABERTA, ESCOLHA O ARQUIVO CSV PREPARADO ANTERIORMENTE
-- TODAS AS NOTAS SERÃO PREENCHIDAS
+- TODAS AS NOTAS SERÃO PREENCHIDAS SEQUENCIALMENTE E AUTOMATICAMENTE
 
 ### 6. ATENÇÃO
-  > OBSERVE QUE O BOTÃO "CALCULAR MÉDIA" É EXIBIDO:
-  - CLIQUE EM ALGUMA DAS NOTAS E PRESSIONE TAB
-  - DEPOIS, É SÓ SALVAR AS NOTAS
+  > DEPOIS, É SÓ SALVAR AS NOTAS
     > **CASO A PLATAFORMA EXIBA ERRO, ESTES PODEM SER OS MOTIVOS:**
     > - NOTAS PREENCHIDAS COM VÍRGULA (NÃO SÃO NÚMEROS INTEIROS)
-    > - NÃO FOI CLICADO EM ALGUMA NOVA E PRESSIONADO TAB
 
-### 7. PRONTO, VAI CURINTHIA!! ♪♫
+### 7. PRONTO 🎉
